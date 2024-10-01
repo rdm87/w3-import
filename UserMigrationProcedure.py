@@ -330,7 +330,6 @@ scrivi_ldif(dizionarioUtentiCanale, fileNameUtentiCanalePasswordExpirationDate) 
 logging.info(f"E' stato creato il file {fileNameUtentiCanalePasswordExpirationDate}")
 
 ### STEP 4 - ELIMINO DAL FILE DEGLI UTENTI APPARTENENTI AL CANALE TUTTE LE ENTITY CHE HANNO PASSWORD EXPIRATION DATE VECCHIA ###
-print("STEP 4 - ELIMINO DAL FILE DEGLI UTENTI APPARTENENTI AL CANALE TUTTE LE ENTITY CHE HANNO PASSWORD EXPIRATION DATE VECCHIA")
 logging.info("STEP 4: ELIMINO DAL FILE DEGLI UTENTI APPARTENENTI AL CANALE TUTTE LE ENTITY CHE HANNO PASSWORD EXPIRATION DATE VECCHIA")
 fileNameUtentiCanaleNoPasswordExpirationDate = f"{pathExportFile}/{canale}_UtentiCanaleNoPasswordExpiration.ldif"
 dizionarioUtentiCanaleNoPasswordExpirationDate=remove_passwordexpirationdate_user(dizionarioUtentiCanale,"20240101") # Creo il dizionario senza le passwordexpirationdate vecchie
@@ -370,64 +369,61 @@ scrivi_ldif(dizionarioUtentiSecondoLivelloFinal, fileNameDizionarioUtentiSecondo
 #file_name_utenti_secondo_livello_sso = f"{pathExportFile}/{canale}_Utenti_Secondo_Livello_SSO_No_Expiration_Date.ldif"
 #scrivi_ldif(dizionario_utenti_secondo_livello_sso, file_name_utenti_secondo_livello_sso) # Scrivo il file in formato ldif
 
-### STEP 10 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO ###
-logging.info("STEP 10: RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO")
+### STEP 9 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO ###
+logging.info("STEP 9: RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO")
 listParentuidSecondoLivello=search_parentuid_for_second_level_user(dizionarioUtentiSecondoLivelloFinal,dizionarioUtenti)
 
-### STEP 11 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI APPARTENENTI AL CANALE ###
-logging.info("STEP 11: RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI APPARTENENTI AL CANALE")
+### STEP 10 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI APPARTENENTI AL CANALE ###
+logging.info("STEP 10: RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI APPARTENENTI AL CANALE")
 listParentuidCanale=search_parentuid_for_second_level_user(dizionarioUtentiCanaleFinal,dizionarioUtenti)
 
-### STEP 12 - Unisco le liste dei parentuid degli utenti di secondo livello e degli utenti del canale
-logging.debug("Unisco le liste dei parentuid degli utenti di secondo livello e degli utenti del canale")
+### STEP 11 - Unisco le liste dei parentuid degli utenti di secondo livello e degli utenti del canale
+logging.info("STEP 11: Unisco le liste dei parentuid degli utenti di secondo livello e degli utenti del canale")
 listParentuidFinal = []
 for item in listParentuidSecondoLivello + listParentuidCanale:
     if item not in listParentuidFinal:
         listParentuidFinal.append(item)
 
-### STEP 13 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE ###
-print("STEP 13 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE")
-logging.info("STEP 11: RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE")
+### STEP 12 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE ###
+logging.info("STEP 12: RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE")
 fileNameParentuidNoSSO=f"{pathExportFile}/{canale}_parentuid_no_sso.txt"
 dizionario_parentuid=search_parentuid_global(listParentuidFinal,dizionarioUtenti)
 scrivi_ldif(dizionario_parentuid, fileNameParentuidNoSSO) # Scrivo il file in formato ldif
 
-### STEP 16 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI PARENT
-logging.info("STEP 16: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
+### STEP 13 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI PARENT
+logging.info("STEP 13: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
 dizionarioParentuidSSO=searchEntrySSO(dizionario_parentuid, dizionarioUtenti)
 fileNameDizionarioParentuidSSO = f"{pathExportFile}/{canale}_UserChildSSO_to_parse.ldif"
 scrivi_ldif(dizionarioParentuidSSO, fileNameDizionarioParentuidSSO) # Scrivo il file in formato ldif
 
-### STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
-print("STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
-logging.info("STEP 17: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+### STEP 14 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
+logging.info("STEP 14: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 dizionarioParentuidSSO_OK,dizionarioParentuid_OK=searchEntrySSOPasswordexpired(dizionarioParentuidSSO,dizionario_parentuid,"20240101")
 fileNameDizionarioParentuidSSO_OK = f"{pathExportFile}/{canale}_05_Parentuid_SSO_FINAL.ldif"
 scrivi_ldif(dizionarioParentuidSSO_OK, fileNameDizionarioParentuidSSO_OK) # Scrivo il file in formato ldif
 fileNameDizionarioParentuid_OK = f"{pathExportFile}/{canale}_04_Parentuid_FINAL.ldif"
 scrivi_ldif(dizionarioParentuid_OK, fileNameDizionarioParentuid_OK) # Scrivo il file in formato ldif
 
-### STEP 14 - RECUPERO LE ENTRY CHILD DEI PARENT UID ###
-logging.info("STEP 14: RECUPERO LE ENTRY CHILD DEI PARENT UID")
+### STEP 15 - RECUPERO LE ENTRY CHILD DEI PARENT UID ###
+logging.info("STEP 15: RECUPERO LE ENTRY CHILD DEI PARENT UID")
 file_name_parentuid_child=f"{pathExportFile}/{canale}_parentuid_child_to_parse.txt"
 dizionario_child_to_filter=search_child_for_parent_uid(listParentuidSecondoLivello,dizionarioUtenti,dizionarioUtentiCanaleFinal,dizionarioUtentiSecondoLivelloFinal,file_name_parentuid_child)
 scrivi_ldif(dizionario_child_to_filter, file_name_parentuid_child) # Scrivo il file in formato ldif
 
-### STEP 15 - RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024 ###
-logging.info("STEP 15: RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+### STEP 16 - RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024 ###
+logging.info("STEP 16: RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 dizionario_child_filtered_password_expirationdate=remove_passwordexpirationdate_user(dizionario_child_to_filter,"20240101")
 fileNameDizionarioUtentiSecondoLivelloFinal=f"{pathExportFile}/{canale}_parentuid_child_exiprationdate_removed.txt"
 scrivi_ldif(dizionario_child_filtered_password_expirationdate, fileNameDizionarioUtentiSecondoLivelloFinal) # Scrivo il file in formato ldif
 
-### STEP 16 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID
-logging.info("STEP 16: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
+### STEP 17 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID
+logging.info("STEP 17: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
 dizionario_child_sso=searchEntrySSO(dizionario_child_filtered_password_expirationdate, dizionarioUtenti)
 file_name_child_sso = f"{pathExportFile}/{canale}_UserChildSSO_to_parse.ldif"
 scrivi_ldif(dizionario_child_sso, file_name_child_sso) # Scrivo il file in formato ldif
 
-### STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
-print("STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
-logging.info("STEP 17: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+### STEP 18 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
+logging.info("STEP 18: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 dizionario_child_sso_OK,dizionario_child_OK=searchEntrySSOPasswordexpired(dizionario_child_sso,dizionario_child_filtered_password_expirationdate,"20240101")
 file_name_dizionario_child_sso_OK = f"{pathExportFile}/{canale}_06_Utenti_child_SSO_FINAL.ldif"
 scrivi_ldif(dizionario_child_sso_OK, file_name_dizionario_child_sso_OK) # Scrivo il file in formato ldif
@@ -438,6 +434,5 @@ end_time = time.time() # Calcolo l'orario di fine
 execution_time = end_time - start_time # Tempo di esecuzione totale
 minutes = execution_time // 60  # Divisione intera per ottenere i minuti
 seconds = execution_time % 60    # Resto della divisione per ottenere i secondi
-print(f"Tempo di esecuzione: {int(minutes)} minuti e {int(seconds)} secondi")
 logging.info(f"Tempo di esecuzione: {int(minutes)} minuti e {int(seconds)} secondi")
 #print(f"Tempo di esecuzione: {int(minutes)} minuti e {seconds:.6f} secondi")
