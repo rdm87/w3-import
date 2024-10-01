@@ -1,12 +1,13 @@
 from datetime import datetime
 import time
 import logging
+import sys
 
 # Procedura che recupera tutti i child dei parentuid
 # Dizionario 1: Dizionario globale
 # Dizionario 2: Dizionario finale degli utenti
 # Dizionario 3: Dizionario finale degli utenti di secondo livello
-def search_child_for_parent_uid(parent_uid_list,dizionario1,dizionario2,dizionario3,file_name_parentuid_child):
+def search_child_for_parent_uid(listParentuidSecondoLivello,dizionario1,dizionario2,dizionario3,file_name_parentuid_child):
     #print("Sono nella funzione search_parentuid_for_second_level_user")
     logging.debug("Sono nella funzione search_child_for_parent_uid")
     
@@ -18,14 +19,14 @@ def search_child_for_parent_uid(parent_uid_list,dizionario1,dizionario2,dizionar
         if 'parentuid' in attrs:
             logging.debug(f"la entry {dn} contiene il parentuid")
             logging.debug(f"Verifico se il parentuid {attrs['parentuid']} è presente nella lista dei parentuid")
-            if attrs['parentuid'] in parent_uid_list:
+            if attrs['parentuid'] in listParentuidSecondoLivello:
                 logging.debug(f"Il parent uid {attrs['parentuid']} è presente nella lista dei parent uid")
                 logging.debug(f"Verifico se il parent uid {attrs['parentuid']} è già presente nel file degli utenti finale")
                 for dn2, attrs2 in dizionario2.items():
                     trovato=False
                     if 'parentuid' in attrs:
                         if dn2 == dn:
-                            if attrs2['parentuid'] in parent_uid_list:
+                            if attrs2['parentuid'] in listParentuidSecondoLivello:
                                 trovato=True
                                 logging.debug(f"L'utente child {dn} già esiste nel file degli utenti finali da importare")
                 if trovato == False:
@@ -33,7 +34,7 @@ def search_child_for_parent_uid(parent_uid_list,dizionario1,dizionario2,dizionar
                         trovato=False
                         if 'parentuid' in attrs:
                             if dn3 == dn:
-                                if attrs3['parentuid'] in parent_uid_list:
+                                if attrs3['parentuid'] in listParentuidSecondoLivello:
                                     trovato=True
                                     logging.debug(f"L'utente child {dn} già esiste nel file degli utenti di secondo livello")
                 if trovato == False:
@@ -46,13 +47,13 @@ def search_child_for_parent_uid(parent_uid_list,dizionario1,dizionario2,dizionar
     
     
 # Procedura che recupera tutte le entry parentuid
-def search_parentuid_global(parent_uid_list,dizionario1,file_name_parentuid_global):
+def search_parentuid_global(listParentuidSecondoLivello,dizionario1):
     #print("Sono nella funzione search_parentuid_global")
     logging.debug("Sono nella funzione search_parentuid_global")
     dizionario_parent_uid = {}
     for dn, attrs in dizionario1.items():
         if 'uid' in attrs:
-            if attrs['uid'] in parent_uid_list:
+            if attrs['uid'] in listParentuidSecondoLivello:
                 #print(f"trovato il parentuid: {attrs['uid']}")
                 logging.debug(f"trovato il parentuid: {attrs['uid']}")
                 dizionario_parent_uid[dn] = attrs
@@ -60,33 +61,20 @@ def search_parentuid_global(parent_uid_list,dizionario1,file_name_parentuid_glob
     return dizionario_parent_uid
     
 # Procedura che recupera la lista di parentuid da ricercare nel dizionario globale
-def search_parentuid_for_second_level_user(dizionario1,dizionario2,nome_file):
+def search_parentuid_for_second_level_user(dizionario1,dizionario2):
     #print("Sono nella funzione search_parentuid_for_second_level_user")
     logging.debug("Sono nella funzione search_parentuid_for_second_level_user")
-    parent_uid_list = []
-    parent_uid_list_Alessio = []
+    listParentuidSecondoLivello = []
     for dn, attrs in dizionario1.items():
         if 'dealername' in attrs and 'parentuid' in attrs:
             if attrs['dealername'] != attrs['parentuid']:
-                for dn2, attrs2 in dizionario2.items():
-                    if 'canale' in attrs2:
-                        if attrs2['uid'] = attrs['parentuid']:
-                        parent_uid_list_Alessio.append(f"{dn}|{attrs['dealername']}|{attrs['parentuid']}|{attr2['canale']}")
-                if attrs['parentuid'] not in parent_uid_list:
-                    parent_uid_list.append(attrs['parentuid'])
-    
-    write_lists_file(parent_uid_list_Alessio,nome_file)
-    for parentuid in parent_uid_list:
-        #print(f"parent uid recuperato: {parentuid}")
-        logging.debug(f"parent uid recuperato: {parentuid}")
-        
-    #for dn in parent_uid_list_Alessio:
-        #print(f"{dn}")
-        
-    return parent_uid_list
+                if attrs['parentuid'] not in listParentuidSecondoLivello:
+                    listParentuidSecondoLivello.append(attrs['parentuid'])   
+                        
+    return listParentuidSecondoLivello
     
 # procedura che cerca gli utenti di secondo livello #
-# dizionario 1: lista degli utenti da importare OK: dizionarioUtenti_OK
+# dizionario 1: lista degli utenti da importare OK: dizionarioUtentiCanaleFinal
 # dizionario 2: dizionario generale con tutto: dizionarioUtenti
 def find_second_level_user(dizionario,dizionario2):
     #print("Sono nella funzione find_second_level_user")
@@ -157,19 +145,16 @@ def searchEntrySSOPasswordexpired(dizionario1,dizionario2,data):
 
 def searchEntrySSO(dizionario, dizionarioGlobale):
     diz_sso_entry = {}
-    #print("Sono nella funzione searchEntrySSO")
-    logging.debug("Sono nella funzione searchEntrySSO")
+    logging.info("Sono nella funzione searchEntrySSO")
     for dn, attrs in dizionario.items():
         dnSSO="realm=SSO,"+dn
         dnSSO_lower="realm=sso,"+dn
         for dn2, attrs2 in dizionarioGlobale.items():
             has_valid_sso=False
             if dnSSO == dn2:
-                #print(f"la entry ricercata è {dnSSO} --> la entry trovata è {dn2}")
                 has_valid_sso = True
             else:
                 if dnSSO_lower == dn2:
-                    #print(f"la entry ricercata è {dnSSO_lower} --> la entry trovata è {dn2}")
                     has_valid_sso = True
             if has_valid_sso:
                 diz_sso_entry[dnSSO] = attrs2
@@ -179,11 +164,10 @@ def searchEntrySSO(dizionario, dizionarioGlobale):
     
 #Funzione che elimina gli utenti con passwordexpirationdate
 def remove_passwordexpirationdate_user(dizionario,data):
-    #print("Sono nella funzione remove_passwordexpirationdate_user")
     logging.info("Sono nella funzione remove_passwordexpirationdate_user")
     
     logging.info("Inizializzo il dizionario che sarà ritornato dalla funzione")
-    diz_passwd_exp_delete = {}
+    dizionarioUtentiCanaleNoPasswordExpirationDate = {}
     
     logging.info("Converto la data da controllare in formato date")
     data_rif = datetime.strptime(data, "%Y%m%d")
@@ -205,15 +189,14 @@ def remove_passwordexpirationdate_user(dizionario,data):
                         break  # Esci dal ciclo se trovi una data scaduta
         if has_valid_passwordexpirationdate:
                 logging.debug(f"Inserisco nel dizionario da restituire l'utente che ha la data corretta: {dn}")
-                diz_passwd_exp_delete[dn] = attrs
+                dizionarioUtentiCanaleNoPasswordExpirationDate[dn] = attrs
             
     logging.info("ritorno il dizionario con gli utenti che hanno data corretta")
-    return diz_passwd_exp_delete
+    return dizionarioUtentiCanaleNoPasswordExpirationDate
                
 
 #Funzione che conta il numero di entry all'interno di un dizionario
 def dictionaryCountEntity (dizionario):
-    #print("Sono nella funzione dictionaryCountEntity")
     logging.debug("Sono nella funzione dictionaryCountEntity")
     return len(dizionario)
     
@@ -224,7 +207,6 @@ def write_lists_file (lista,nome_file):
         f.write(f"DN|DEALERNAME|PARENTUID\n")
         for row in lista:
             f.write(f"{row}\n")
-    #print(f"Creato il file {nome_file}")
     logging.debug(f"Creato il file {nome_file}")
 
 #Funzione che scrive in formato ldif il contenuto di un dizionario
@@ -244,9 +226,9 @@ def scrivi_ldif(dizionario, nome_file):
     logging.debug(f"Creato il file {nome_file}")
 
 #Funzione che estrae tutte le entity appartenenti ad un canale e le salva in un file ldif
-def list_users_for_channel(diz_user_5_digit_dealer_name_removed,canale):
-    #print("Sono nella funzione list_users_for_channel")
-    logging.debug("Sono nella funzione list_users_for_channel")
+def searchUserForChannel(diz_user_5_digit_dealer_name_removed,canale):
+    #print("Sono nella funzione searchUserForChannel")
+    logging.info("Sono nella funzione searchUserForChannel")
     utenti_con_canale = {}
     for dn, attrs in diz_user_5_digit_dealer_name_removed.items():
         if 'canale' in attrs:
@@ -258,29 +240,26 @@ def list_users_for_channel(diz_user_5_digit_dealer_name_removed,canale):
             
 
 # Funzione che elimina i dealername a 5 cifre dalla lista degli utenti totali
-def remove_all_user_with_dealername_5_number(dizionarioLdapEntry,canale):
+def removeAllUserWithDealername5Digit(dizionarioUtenti,canale):
+    logging.info("Sono nella funzione removeAllUserWithDealername5Digit")
     dealernameCount=0
-    diz_user_5_digit_dealer_name_removed = {}
-    #print("Sono nella funzione di rimozione degli utenti aventi dealername a 5 cifre")
+    dizionarioUtentiNoDealername5Digit = {}
     logging.debug("Sono nella funzione di rimozione degli utenti aventi dealername a 5 cifre")
-    for dn, attrs in dizionarioLdapEntry.items():
+    for dn, attrs in dizionarioUtenti.items():
         has_valid_dealername = True
         if 'dealername' in attrs:
             for dealername in attrs['dealername']:
                 if dealername.isdigit() and len(dealername) == 5:
+                    logging.debug(f"il dealername: {dealername} ha cinque cifre")
                     dealernameCount+=1
                     has_valid_dealername = False
-                    #print(f"Per il DN {dn} il dealername è: {dealername}")
         
         if has_valid_dealername:
-                diz_user_5_digit_dealer_name_removed[dn] = attrs
+                dizionarioUtentiNoDealername5Digit[dn] = attrs
                 
-                    
-    #print(f"il numero di utenti che hanno dealername a 5 cifre è: {dealernameCount}")
-    logging.debug(f"il numero di utenti che hanno dealername a 5 cifre è: {dealernameCount}")
-    #print(f"Il numero di elementi nel dizionario aggiornato senza i dealername a 5 cifre è: {dictionaryCountEntity(diz_user_5_digit_dealer_name_removed)}")
-    logging.debug(f"Il numero di elementi nel dizionario aggiornato senza i dealername a 5 cifre è: {dictionaryCountEntity(diz_user_5_digit_dealer_name_removed)}")
-    return diz_user_5_digit_dealer_name_removed
+    logging.info(f"il numero di utenti che hanno dealername a 5 cifre è: {dealernameCount}")
+    logging.info(f"Il numero di elementi nel dizionario aggiornato senza i dealername a 5 cifre è: {dictionaryCountEntity(dizionarioUtentiNoDealername5Digit)}")
+    return dizionarioUtentiNoDealername5Digit
 
 #Funzione che effettua il parse del file di input contenenti tutte le entry ldap di OID
 def parse_ldif(file_path):
@@ -314,128 +293,145 @@ def print_dictionary(dizionario):
             if key != 'dn':
                 print(f'  {key}: {values}')
 
-def activate_logging():
-    logging.basicConfig(filename='/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_UserMigrationProcedure.log', level=logging.INFO, 
+def activate_logging(canale):
+    logging.basicConfig(filename=f'{pathExportFile}/{canale}_UserMigrationProcedure.log', level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-activate_logging()
+if len(sys.argv) > 3:
+    canale = sys.argv[1] #Assegno il canale da controllare
+    pathExportFile = sys.argv[2] # Assegno il percorso dove salvare i file di output
+    pathImportFile = sys.argv[3] # Assegno il percorso del file di input dal quale leggere gli utenti
+
+activate_logging(canale)
 start_time = time.time() #Setto l'orario di start
 logging.info("Inizio procedura di creazione file per migrazione utenti")
 
-canale = "PP" #Assegno il canale da controllare
+
 
 # Percorso del file LDIF
 ### STEP 0 - PARSO IL FILE DEGLI UTENTI ESTRATTO DA OID PER CONVERTIRLO IN UNA STRUTTURA DATI DA ANALIZZARE ###
-print("STEP 0 - PARSO IL FILE DEGLI UTENTI ESTRATTO DA OID PER CONVERTIRLO IN UNA STRUTTURA DATI DA ANALIZZARE")
 logging.info("STEP 0 - PARSO IL FILE DEGLI UTENTI ESTRATTO DA OID PER CONVERTIRLO IN UNA STRUTTURA DATI DA ANALIZZARE")
-file_path = '/mnt/c/temporary/wind/migrationUsersProcedure/o=pos.wind.it.ldif' #File di input nel quale sono presenti tutti gli utenti esportati da OID
+file_path = pathImportFile #File di input nel quale sono presenti tutti gli utenti esportati da OID
 dizionarioUtenti = parse_ldif(file_path) #Creo un dizionario che contiene tutti gli utenti
 
 ### STEP 1 - Rimuovo tutte le entry che hanno il dealername di cinque cifre ###
-print("STEP 1 - Rimuovo tutte le entry che hanno il dealername di cinque cifre")
 logging.info("STEP 1: Rimuovo tutte le entry che hanno il dealername di cinque cifre")
-diz_user_5_digit_dealer_name_removed=remove_all_user_with_dealername_5_number(dizionarioUtenti,canale) #Creo un dizionario senza gli utenti aventi dealername a 5 cifre
+dizionarioUtentiNoDealername5Digit=removeAllUserWithDealername5Digit(dizionarioUtenti,canale) #Creo un dizionario senza gli utenti aventi dealername a 5 cifre
 
 ### STEP 2 - RECUPERO TUTTE LE ENTRY DEL CANALE DI INPUT ###
-print("STEP 2 - RECUPERO TUTTE LE ENTRY DEL CANALE DI INPUT")
 logging.info("STEP 2: RECUPERO TUTTE LE ENTRY DEL CANALE DI INPUT")
-user_for_channel=list_users_for_channel(diz_user_5_digit_dealer_name_removed,canale) #creo il dizionario con gli utenti appartenenti al canale di input
-#print(f"il numero di utenti appartenenti al canale {canale} è: {dictionaryCountEntity(user_for_channel)}")
-logging.debug(f"il numero di utenti appartenenti al canale {canale} è: {dictionaryCountEntity(user_for_channel)}")
+dizionarioUtentiCanale=searchUserForChannel(dizionarioUtentiNoDealername5Digit,canale) #creo il dizionario con gli utenti appartenenti al canale di input
+logging.info(f"il numero di utenti appartenenti al canale {canale} è: {dictionaryCountEntity(dizionarioUtentiCanale)}")
 
 ### STEP 3 - SALVO TUTTI GLI UTENTI APPARTENENTI AD UN CANALE ALL'INTERNO DI UN FILE .LDIF ###
-print("STEP 3 - SALVO TUTTI GLI UTENTI APPARTENENTI AD UN CANALE ALL'INTERNO DI UN FILE .LDIF ")
 logging.info("STEP 3: SALVO TUTTI GLI UTENTI APPARTENENTI AD UN CANALE ALL'INTERNO DI UN FILE .LDIF ")
-file_name_users_channel = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_UsersForChannelWithPasswordExpirationToChange.ldif" #percorso del file che salva tutti gli utenti appartenenti ad un determinato canale
-scrivi_ldif(user_for_channel, file_name_users_channel) # Scrivo il file in formato ldif, con tutti gli utenti appartenenti ad un canale
+fileNameUtentiCanalePasswordExpirationDate = f"{pathExportFile}/{canale}_UtentiCanalePasswordExpiration.ldif" #percorso del file che salva tutti gli utenti appartenenti ad un determinato canale
+scrivi_ldif(dizionarioUtentiCanale, fileNameUtentiCanalePasswordExpirationDate) # Scrivo il file in formato ldif, con tutti gli utenti appartenenti ad un canale
+logging.info(f"E' stato creato il file {fileNameUtentiCanalePasswordExpirationDate}")
 
 ### STEP 4 - ELIMINO DAL FILE DEGLI UTENTI APPARTENENTI AL CANALE TUTTE LE ENTITY CHE HANNO PASSWORD EXPIRATION DATE VECCHIA ###
 print("STEP 4 - ELIMINO DAL FILE DEGLI UTENTI APPARTENENTI AL CANALE TUTTE LE ENTITY CHE HANNO PASSWORD EXPIRATION DATE VECCHIA")
 logging.info("STEP 4: ELIMINO DAL FILE DEGLI UTENTI APPARTENENTI AL CANALE TUTTE LE ENTITY CHE HANNO PASSWORD EXPIRATION DATE VECCHIA")
-file_name_user_channel_without_password = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_UsersForChannelWithoutPasswordExpirationToChange.ldif"
-diz_passwd_exp_delete=remove_passwordexpirationdate_user(user_for_channel,"20240101") # Creo il dizionario senza le passwordexpirationdate vecchie
-scrivi_ldif(diz_passwd_exp_delete, file_name_user_channel_without_password) # Scrivo il file in formato ldif
-#print(f"il numero di utenti appartenenti al canale {canale} dopo la rimozione delle entry con passwordexpirationdate vecchia è: è: {dictionaryCountEntity(diz_passwd_exp_delete)}")
-logging.debug(f"il numero di utenti appartenenti al canale {canale} dopo la rimozione delle entry con passwordexpirationdate vecchia è: {dictionaryCountEntity(diz_passwd_exp_delete)}")
+fileNameUtentiCanaleNoPasswordExpirationDate = f"{pathExportFile}/{canale}_UtentiCanaleNoPasswordExpiration.ldif"
+dizionarioUtentiCanaleNoPasswordExpirationDate=remove_passwordexpirationdate_user(dizionarioUtentiCanale,"20240101") # Creo il dizionario senza le passwordexpirationdate vecchie
+scrivi_ldif(dizionarioUtentiCanaleNoPasswordExpirationDate, fileNameUtentiCanaleNoPasswordExpirationDate) # Scrivo il file in formato ldif
+logging.info(f"il numero di utenti appartenenti al canale {canale} dopo la rimozione delle entry con passwordexpirationdate vecchia è: {dictionaryCountEntity(dizionarioUtentiCanaleNoPasswordExpirationDate)}")
 
 ### STEP 5 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE
-print("STEP 5 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE")
 logging.info("STEP 5: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE")
-dizionario_sso=searchEntrySSO(diz_passwd_exp_delete, dizionarioUtenti)
-file_name_sso = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_UsersChannellSSOToParse.ldif"
-scrivi_ldif(dizionario_sso, file_name_sso) # Scrivo il file in formato ldif
+dizionarioUtentiCanaleSSO=searchEntrySSO(dizionarioUtentiCanaleNoPasswordExpirationDate, dizionarioUtenti)
+fileNameUtentiCanaleSSO = f"{pathExportFile}/{canale}_UtentiCanaleSSOPasswordExpirationDate.ldif.ldif"
+scrivi_ldif(dizionarioUtentiCanaleSSO, fileNameUtentiCanaleSSO) # Scrivo il file in formato ldif
 
 ### STEP 6 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
-print("STEP 6 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 logging.info("STEP 6: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
-dizionario_utenti_sso_OK,dizionarioUtenti_OK=searchEntrySSOPasswordexpired(dizionario_sso,diz_passwd_exp_delete,"20240101")
-file_name_dizionario_utenti_sso_OK = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_UtentiSSO_FINAL.ldif"
-scrivi_ldif(dizionario_utenti_sso_OK, file_name_dizionario_utenti_sso_OK) # Scrivo il file in formato ldif
-file_name_dizionario_utenti_OK = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_Utenti_FINAL.ldif"
-scrivi_ldif(dizionarioUtenti_OK, file_name_dizionario_utenti_OK) # Scrivo il file in formato ldif
+dizionarioUtentiCanaleSSOFinal,dizionarioUtentiCanaleFinal=searchEntrySSOPasswordexpired(dizionarioUtentiCanaleSSO,dizionarioUtentiCanaleNoPasswordExpirationDate,"20240101")
+fileNamedizionarioUtentiCanaleSSOFinal = f"{pathExportFile}/{canale}_02_UtentiCanaleSSO_FINAL.ldif"
+scrivi_ldif(dizionarioUtentiCanaleSSOFinal, fileNamedizionarioUtentiCanaleSSOFinal) # Scrivo il file in formato ldif
+fileNameDizionarioUtentiCanaleFinal = f"{pathExportFile}/{canale}_01_UtentiCanale_FINAL.ldif"
+scrivi_ldif(dizionarioUtentiCanaleFinal, fileNameDizionarioUtentiCanaleFinal) # Scrivo il file in formato ldif
 
 ### STEP 7 - CERCO GLI UTENTI DI SECONDO LIVELLO PARTENDO DAI DEALERNAME ###
-print("STEP 7 - CERCO GLI UTENTI DI SECONDO LIVELLO PARTENDO DAI DEALERNAME")
 logging.info("STEP 7: CERCO GLI UTENTI DI SECONDO LIVELLO PARTENDO DAI DEALERNAME")
-dizionario_utenti_secondo_livello_da_filtrare=find_second_level_user(dizionarioUtenti_OK,dizionarioUtenti)
-file_name_dizionario_dizionario_utenti_secondo_livello_da_filtrare = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_Utenti_Secondo_Livello_Da_Filtrare.ldif"
-scrivi_ldif(dizionario_utenti_secondo_livello_da_filtrare, file_name_dizionario_dizionario_utenti_secondo_livello_da_filtrare) # Scrivo il file in formato ldif
+dizionarioUtentiSecondoLivelloPasswordExpirationDate=find_second_level_user(dizionarioUtentiCanaleFinal,dizionarioUtenti)
+fileNameDizionarioUtentiSecondoLivelloPasswordExpirationDate = f"{pathExportFile}/{canale}_Utenti_Secondo_Livello_Da_Filtrare.ldif"
+scrivi_ldif(dizionarioUtentiSecondoLivelloPasswordExpirationDate, fileNameDizionarioUtentiSecondoLivelloPasswordExpirationDate) # Scrivo il file in formato ldif
 
 ### STEP 8 - RIMUOVO LE ENTRY DI SECONDO LIVELLO CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024 ###
-print("STEP 8 - RIMUOVO LE ENTRY DI SECONDO LIVELLO CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 logging.info("STEP 8: RIMUOVO LE ENTRY DI SECONDO LIVELLO CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
-dizionario_utenti_secondo_livello_expiration_date_rimosse=remove_passwordexpirationdate_user(dizionario_utenti_secondo_livello_da_filtrare,"20240101")
-file_name_dizionario_utenti_secondo_livello_expiration_date_rimosse=f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_Utenti_Secondo_Livello_No_Expiration_Date.ldif"
-scrivi_ldif(dizionario_utenti_secondo_livello_expiration_date_rimosse, file_name_dizionario_utenti_secondo_livello_expiration_date_rimosse) # Scrivo il file in formato ldif
+dizionarioUtentiSecondoLivelloFinal=remove_passwordexpirationdate_user(dizionarioUtentiSecondoLivelloPasswordExpirationDate,"20240101")
+fileNameDizionarioUtentiSecondoLivelloFinal=f"{pathExportFile}/{canale}_03_UtentiSecondoLivello_FINAL.ldif"
+scrivi_ldif(dizionarioUtentiSecondoLivelloFinal, fileNameDizionarioUtentiSecondoLivelloFinal) # Scrivo il file in formato ldif
 
 #### STEP 9 - RECUPERO TUTTE LE ENTRY DI TIPO REALM=SSO, PER GLI UTENTI DI SECONDO LIVELLO, DAL FILE PRINCIPALE ###
 #print("STEP 9 - RECUPERO TUTTE LE ENTRY DI TIPO REALM=SSO, PER GLI UTENTI DI SECONDO LIVELLO, DAL FILE PRINCIPALE")
 #logging.info("STEP 9: RECUPERO TUTTE LE ENTRY DI TIPO REALM=SSO, PER GLI UTENTI DI SECONDO LIVELLO, DAL FILE PRINCIPALE")
-#dizionario_utenti_secondo_livello_sso=searchEntrySSO(dizionario_utenti_secondo_livello_expiration_date_rimosse, dizionarioUtenti)
-#file_name_utenti_secondo_livello_sso = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_Utenti_Secondo_Livello_SSO_No_Expiration_Date.ldif"
+#dizionario_utenti_secondo_livello_sso=searchEntrySSO(dizionarioUtentiSecondoLivelloFinal, dizionarioUtenti)
+#file_name_utenti_secondo_livello_sso = f"{pathExportFile}/{canale}_Utenti_Secondo_Livello_SSO_No_Expiration_Date.ldif"
 #scrivi_ldif(dizionario_utenti_secondo_livello_sso, file_name_utenti_secondo_livello_sso) # Scrivo il file in formato ldif
 
 ### STEP 10 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO ###
-print("STEP 10 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO")
 logging.info("STEP 10: RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI DI SECONDO LIVELLO")
-file_name_lista_parentuid_alessio=f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_parentuid_lists.txt"
-parent_uid_list=search_parentuid_for_second_level_user(dizionario_utenti_secondo_livello_expiration_date_rimosse,dizionarioUtenti,file_name_lista_parentuid_alessio)
+listParentuidSecondoLivello=search_parentuid_for_second_level_user(dizionarioUtentiSecondoLivelloFinal,dizionarioUtenti)
 
-### STEP 11 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE ###
-print("STEP 11 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE")
+### STEP 11 - RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI APPARTENENTI AL CANALE ###
+logging.info("STEP 11: RECUPERO LA LISTA DEI PARENT UID DEGLI UTENTI APPARTENENTI AL CANALE")
+listParentuidCanale=search_parentuid_for_second_level_user(dizionarioUtentiCanaleFinal,dizionarioUtenti)
+
+### STEP 12 - Unisco le liste dei parentuid degli utenti di secondo livello e degli utenti del canale
+logging.debug("Unisco le liste dei parentuid degli utenti di secondo livello e degli utenti del canale")
+listParentuidFinal = []
+for item in listParentuidSecondoLivello + listParentuidCanale:
+    if item not in listParentuidFinal:
+        listParentuidFinal.append(item)
+
+### STEP 13 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE ###
+print("STEP 13 - RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE")
 logging.info("STEP 11: RECUPERO LE ENTRY DEI PARENTUID DAL FILE PRINCIPALE")
-file_name_parentuid_global=f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_parentuid_FINAL.txt"
-dizionario_parentuid=search_parentuid_global(parent_uid_list,dizionarioUtenti,file_name_parentuid_global)
-scrivi_ldif(dizionario_parentuid, file_name_parentuid_global) # Scrivo il file in formato ldif
+fileNameParentuidNoSSO=f"{pathExportFile}/{canale}_parentuid_no_sso.txt"
+dizionario_parentuid=search_parentuid_global(listParentuidFinal,dizionarioUtenti)
+scrivi_ldif(dizionario_parentuid, fileNameParentuidNoSSO) # Scrivo il file in formato ldif
 
-### STEP 12 - RECUPERO LE ENTRY CHILD DEI PARENT UID ###
-print("STEP 12: RECUPERO LE ENTRY CHILD DEI PARENT UID")
-logging.info("STEP 12: RECUPERO LE ENTRY CHILD DEI PARENT UID")
-file_name_parentuid_child=f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_parentuid_child_to_parse.txt"
-dizionario_child_to_filter=search_child_for_parent_uid(parent_uid_list,dizionarioUtenti,dizionarioUtenti_OK,dizionario_utenti_secondo_livello_expiration_date_rimosse,file_name_parentuid_child)
+### STEP 16 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI PARENT
+logging.info("STEP 16: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
+dizionarioParentuidSSO=searchEntrySSO(dizionario_parentuid, dizionarioUtenti)
+fileNameDizionarioParentuidSSO = f"{pathExportFile}/{canale}_UserChildSSO_to_parse.ldif"
+scrivi_ldif(dizionarioParentuidSSO, fileNameDizionarioParentuidSSO) # Scrivo il file in formato ldif
+
+### STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
+print("STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+logging.info("STEP 17: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+dizionarioParentuidSSO_OK,dizionarioParentuid_OK=searchEntrySSOPasswordexpired(dizionarioParentuidSSO,dizionario_parentuid,"20240101")
+fileNameDizionarioParentuidSSO_OK = f"{pathExportFile}/{canale}_05_Parentuid_SSO_FINAL.ldif"
+scrivi_ldif(dizionarioParentuidSSO_OK, fileNameDizionarioParentuidSSO_OK) # Scrivo il file in formato ldif
+fileNameDizionarioParentuid_OK = f"{pathExportFile}/{canale}_04_Parentuid_FINAL.ldif"
+scrivi_ldif(dizionarioParentuid_OK, fileNameDizionarioParentuid_OK) # Scrivo il file in formato ldif
+
+### STEP 14 - RECUPERO LE ENTRY CHILD DEI PARENT UID ###
+logging.info("STEP 14: RECUPERO LE ENTRY CHILD DEI PARENT UID")
+file_name_parentuid_child=f"{pathExportFile}/{canale}_parentuid_child_to_parse.txt"
+dizionario_child_to_filter=search_child_for_parent_uid(listParentuidSecondoLivello,dizionarioUtenti,dizionarioUtentiCanaleFinal,dizionarioUtentiSecondoLivelloFinal,file_name_parentuid_child)
 scrivi_ldif(dizionario_child_to_filter, file_name_parentuid_child) # Scrivo il file in formato ldif
 
-### STEP 13 - RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024 ###
-print("STEP 13 - RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
-logging.info("STEP 13: RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+### STEP 15 - RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024 ###
+logging.info("STEP 15: RIMUOVO LE ENTRY CHILD CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 dizionario_child_filtered_password_expirationdate=remove_passwordexpirationdate_user(dizionario_child_to_filter,"20240101")
-file_name_dizionario_utenti_secondo_livello_expiration_date_rimosse=f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_parentuid_child_exiprationdate_removed.txt"
-scrivi_ldif(dizionario_child_filtered_password_expirationdate, file_name_dizionario_utenti_secondo_livello_expiration_date_rimosse) # Scrivo il file in formato ldif
+fileNameDizionarioUtentiSecondoLivelloFinal=f"{pathExportFile}/{canale}_parentuid_child_exiprationdate_removed.txt"
+scrivi_ldif(dizionario_child_filtered_password_expirationdate, fileNameDizionarioUtentiSecondoLivelloFinal) # Scrivo il file in formato ldif
 
-### STEP 14 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID
-print("STEP 14 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
-logging.info("STEP 14: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
+### STEP 16 - RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID
+logging.info("STEP 16: RECUPERO TUTTE LE ENTRY DI TIPO realm=SSO DAL FILE PRINCIPALE PER GLI UTENTI CHILD DEI PARENTUID")
 dizionario_child_sso=searchEntrySSO(dizionario_child_filtered_password_expirationdate, dizionarioUtenti)
-file_name_child_sso = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_UserChildSSO_to_parse.ldif"
+file_name_child_sso = f"{pathExportFile}/{canale}_UserChildSSO_to_parse.ldif"
 scrivi_ldif(dizionario_child_sso, file_name_child_sso) # Scrivo il file in formato ldif
 
-### STEP 15 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
-print("STEP 15 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
-logging.info("STEP 15: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+### STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024
+print("STEP 17 - RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
+logging.info("STEP 17: RIMUOVO LE ENTRY SSO E GLI UTENTI ASSOCIATI CHE HANNO PASSWORD EXPIRATION DATE ANTECEDENTE AL GIORNO 01/01/2024")
 dizionario_child_sso_OK,dizionario_child_OK=searchEntrySSOPasswordexpired(dizionario_child_sso,dizionario_child_filtered_password_expirationdate,"20240101")
-file_name_dizionario_child_sso_OK = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_Utenti_child_SSO_FINAL.ldif"
+file_name_dizionario_child_sso_OK = f"{pathExportFile}/{canale}_06_Utenti_child_SSO_FINAL.ldif"
 scrivi_ldif(dizionario_child_sso_OK, file_name_dizionario_child_sso_OK) # Scrivo il file in formato ldif
-file_name_child_OK = f"/mnt/c/temporary/wind/migrationUsersProcedure/{canale}_Utenti_child_FINAL.ldif"
+file_name_child_OK = f"{pathExportFile}/{canale}_07_Utenti_child_FINAL.ldif"
 scrivi_ldif(dizionario_child_OK, file_name_child_OK) # Scrivo il file in formato ldif
 
 end_time = time.time() # Calcolo l'orario di fine
